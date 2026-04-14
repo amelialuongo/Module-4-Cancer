@@ -37,31 +37,31 @@ cancer_samples = metadata_df[metadata_df['cancer_type'].isin(cancer_type)].index
 print(cancer_samples)
 # Subset the main data to include only these samples
 # When you want a subset of columns, you can pass a list of column names to the data frame in []
-BRCA_data = data[cancer_samples]
+cancer_data = data[cancer_samples]
 
 # %%
 # Subset by index (genes)
 ####################################################
 desired_gene_list = ['BRCA1', 'BRCA2', 'TP53', 'TGA5', 'HHEX', 'S1PR4', 'GINS4']
-gene_list = [gene for gene in desired_gene_list if gene in BRCA_data.index]
+gene_list = [gene for gene in desired_gene_list if gene in cancer_data.index]
 for gene in desired_gene_list:
     if gene not in gene_list:
         print(f"Warning: {gene} not found in the dataset.")
 
 # .loc[] is the method to subset by index labels
 # .iloc[] will subset by index position (integer location) instead
-BRCA_gene_data = BRCA_data.loc[gene_list]
-print(BRCA_gene_data.head())
+cancer_gene_data = cancer_data.loc[gene_list]
+print(cancer_gene_data.head())
 
 # %%
 # Basic statistics on the subsetted data
 ####################################################
-print(BRCA_gene_data.describe())
-print(BRCA_gene_data.var(axis=1))  # Variance of each gene across samples
+print(cancer_gene_data.describe())
+print(cancer_gene_data.var(axis=1))  # Variance of each gene across samples
 # Mean expression of each gene across samples
-print(BRCA_gene_data.mean(axis=1))
+print(cancer_gene_data.mean(axis=1))
 # Median expression of each gene across samples
-print(BRCA_gene_data.median(axis=1))
+print(cancer_gene_data.median(axis=1))
 
 # %%
 # Explore categorical variables in metadata
