@@ -42,7 +42,7 @@ cancer_data = data[cancer_samples]
 # %%
 # Subset by index (genes)
 ####################################################
-desired_gene_list = ['BRCA1', 'BRCA2', 'TP53', 'TGA5', 'HHEX', 'S1PR4', 'GINS4']
+desired_gene_list = ['BRCA1', 'BRCA2', 'TP53', 'PTEN', 'ITGA5', 'HHEX', 'S1PR4', 'GINS4']
 gene_list = [gene for gene in desired_gene_list if gene in cancer_data.index]
 for gene in desired_gene_list:
     if gene not in gene_list:
@@ -90,12 +90,12 @@ print(cancer_merged.head())
 ####################################################
 # Boxplot of EGFR expression in BRCA samples using SEABORN
 # Works really well with pandas dataframes, because most methods allow you to pass in a dataframe directly
-sns.boxplot(data=BRCA_merged, x="gender", y='EGFR')
+sns.boxplot(data=cancer_merged, x="gender", y='EGFR')
 plt.title("EGFR Expression by Gender in BRCA Samples")
 plt.show()
 
 # Boxplot of MYC and EGFR expression in BRCA samples using PANDAS directly
-BRCA_merged[['MYC', 'EGFR']].plot.box()
+cancer_merged[['MYC', 'EGFR']].plot.box()
 plt.title("MYC and EGFR Expression in BRCA Samples")
 plt.show()
 
