@@ -80,10 +80,10 @@ print(metadata_df.groupby(
 ####################################################
 # Merge the subsetted expression data with metadata for BRCA samples,
 # so rows are samples and columns include gene expression for EGFR and MYC and metadata
-BRCA_metadata = metadata_df.loc[cancer_samples]
-BRCA_merged = BRCA_gene_data.T.merge(
-    BRCA_metadata, left_index=True, right_index=True)
-print(BRCA_merged.head())
+cancer_metadata = metadata_df.loc[cancer_samples]
+cancer_merged = cancer_gene_data.T.merge(
+    cancer_metadata, left_index=True, right_index=True)
+print(cancer_merged.head())
 
 # %%
 # Plotting
