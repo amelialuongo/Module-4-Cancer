@@ -7,10 +7,8 @@ import seaborn as sns
 # %%
 # Load the data
 ####################################################
-data = pd.read_csv(
-    '../Data/TRAINING_SET_GSE62944_subsample_log2TPM.csv', index_col=0, header=0)  # can also use larger dataset with more genes
-metadata_df = pd.read_csv(
-    '../Data/TRAINING_SET_GSE62944_metadata.csv', index_col=0, header=0)
+data = pd.read_csv('Data/TRAINING_SET_GSE62944_subsample_log2TPM.csv', index_col=0, header=0)
+metadata_df = pd.read_csv('Data/TRAINING_SET_GSE62944_metadata.csv', index_col=0, header=0)
 print(data.head())
 
 # %%
@@ -42,16 +40,29 @@ cancer_data = data[cancer_samples]
 # %%
 # Subset by index (genes)
 ####################################################
-desired_gene_list = ['BRCA1', 'BRCA2', 'TP53', 'PTEN', 'ITGA5', 'HHEX', 'S1PR4', 'GINS4']
+
+# Load gene list from Menyhart hallmarks file and extract metastasis row
+hallmarks = {}
+with open('Data/Menyhart_JPA_CancerHallmarks_core.csv') as f:
+    for line in f:
+        parts = line.strip().strip('"').split('\t')
+        hallmarks[parts[0]] = parts[1:]
+
+desired_gene_list = hallmarks['TISSUE INVASION AND METASTASIS']
+
 gene_list = [gene for gene in desired_gene_list if gene in cancer_data.index]
-for gene in desired_gene_list:
-    if gene not in gene_list:
-        print(f"Warning: {gene} not found in the dataset.")
+
 
 # .loc[] is the method to subset by index labels
 # .iloc[] will subset by index position (integer location) instead
 cancer_gene_data = cancer_data.loc[gene_list]
 print(cancer_gene_data.head())
+
+print(gene_list)
+print(f"\nTotal: {len(gene_list)} genes")
+
+
+
 
 # %%
 # Basic statistics on the subsetted data
@@ -86,17 +97,107 @@ cancer_merged = cancer_gene_data.T.merge(
 print(cancer_merged.head())
 
 # %%
-# Plotting
+# Plotting - Gene expression across cancer types
 ####################################################
-# Boxplot of EGFR expression in BRCA samples using SEABORN
-# Works really well with pandas dataframes, because most methods allow you to pass in a dataframe directly
-sns.boxplot(data=cancer_merged, x="gender", y='EGFR')
-plt.title("EGFR Expression by Gender in BRCA Samples")
+
+# Boxplot of a key metastasis gene across cancer types
+sns.boxplot(data=cancer_merged, x='cancer_type', y='SNAI1')
+plt.title('SNAI1 (EMT driver) Expression Across Gynecological Cancers')
+plt.xlabel('Cancer Type')
+plt.ylabel('log2 TPM Expression')
 plt.show()
 
-# Boxplot of MYC and EGFR expression in BRCA samples using PANDAS directly
-cancer_merged[['MYC', 'EGFR']].plot.box()
-plt.title("MYC and EGFR Expression in BRCA Samples")
+# Boxplot of key metastasis gene by contraceptive use
+# Filter out unknown to focus on samples with actual data
+known_hormone = cancer_merged[cancer_merged['history_hormonal_contraceptives_use'].isin(['Never Used', 'Former User', 'Current User'])]
+
+sns.boxplot(data=known_hormone, x='history_hormonal_contraceptives_use', y='SNAI1')
+plt.title('SNAI1 Expression by Hormonal Contraceptive Use')
+plt.xlabel('Contraceptive Use History')
+plt.ylabel('log2 TPM Expression')
+plt.show()
+
+# Boxplot comparing contraceptive use AND cancer type together
+sns.boxplot(data=known_hormone, x='cancer_type', y='SNAI1', hue='history_hormonal_contraceptives_use')
+plt.title('SNAI1 Expression by Cancer Type and Contraceptive Use')
+plt.xlabel('Cancer Type')
+plt.ylabel('log2 TPM Expression')
+plt.legend(title='Contraceptive Use', bbox_to_anchor=(1.01, 1), loc='upper left')
+plt.tight_layout()
 plt.show()
 
 # %%
+# Prepare data for PCA
+####################################################
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+# Transpose so rows=samples, columns=genes, then scale
+X = cancer_gene_data.T
+X_scaled = StandardScaler().fit_transform(X)
+
+# %%
+# Run PCA and plot - colored by cancer type
+####################################################
+X_pca = PCA(n_components=2, random_state=42).fit_transform(X_scaled)
+
+cancer_labels = metadata_df.loc[X.index, 'cancer_type']
+
+fig, ax = plt.subplots(figsize=(8, 6))
+for ctype in cancer_labels.unique():
+    mask = cancer_labels == ctype
+    ax.scatter(X_pca[mask, 0], X_pca[mask, 1], label=ctype, alpha=0.7, s=30)
+ax.set_xlabel('PC1')
+ax.set_ylabel('PC2')
+ax.set_title('PCA - Colored by Cancer Type')
+ax.legend(title='Cancer type')
+plt.show()
+
+# %%
+# PCA - colored by hormonal contraceptive use
+####################################################
+hormone_labels = metadata_df.loc[X.index, 'history_hormonal_contraceptives_use']
+hormone_labels = hormone_labels.fillna('Unknown').replace(['[Not Available]', '[Unknown]'], 'Unknown')
+
+fig, ax = plt.subplots(figsize=(8, 6))
+for val in hormone_labels.unique():
+    mask = hormone_labels == val
+    ax.scatter(X_pca[mask, 0], X_pca[mask, 1], label=val, alpha=0.7, s=30)
+ax.set_xlabel('PC1')
+ax.set_ylabel('PC2')
+ax.set_title('PCA - Colored by Hormonal Contraceptive Use')
+ax.legend(title='Contraceptive use')
+plt.show()
+
+# %%
+# K-means clustering on PCA
+####################################################
+from sklearn.cluster import KMeans
+
+km = KMeans(n_clusters=5, random_state=42, n_init=10)
+cluster_labels = km.fit_predict(X_pca)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1], c=cluster_labels, cmap='tab10', alpha=0.7, s=30)
+ax.set_xlabel('PC1')
+ax.set_ylabel('PC2')
+ax.set_title('K-means Clusters on PCA')
+plt.colorbar(scatter, label='Cluster')
+plt.show()
+
+# %%
+# UMAP
+####################################################
+import umap
+
+X_umap = umap.UMAP(n_components=2, random_state=42).fit_transform(X_scaled)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+for ctype in cancer_labels.unique():
+    mask = cancer_labels == ctype
+    ax.scatter(X_umap[mask, 0], X_umap[mask, 1], label=ctype, alpha=0.7, s=30)
+ax.set_xlabel('UMAP 1')
+ax.set_ylabel('UMAP 2')
+ax.set_title('UMAP - Colored by Cancer Type')
+ax.legend(title='Cancer type')
+plt.show()
