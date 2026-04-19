@@ -7,8 +7,8 @@ import seaborn as sns
 # %%
 # Load the data
 ####################################################
-data = pd.read_csv('Data/TRAINING_SET_GSE62944_subsample_log2TPM.csv', index_col=0, header=0)
-metadata_df = pd.read_csv('Data/TRAINING_SET_GSE62944_metadata.csv', index_col=0, header=0)
+data = pd.read_csv('/Users/amelialuongo/Desktop/comp bme/Module-4-Cancer/data/TRAINING_SET_GSE62944_subsample_log2TPM.csv', index_col=0, header=0)
+metadata_df = pd.read_csv('/Users/amelialuongo/Desktop/comp bme/Module-4-Cancer/data/TRAINING_SET_GSE62944_metadata.csv', index_col=0, header=0)
 print(data.head())
 
 # %%
@@ -43,7 +43,7 @@ cancer_data = data[cancer_samples]
 
 # Load gene list from Menyhart hallmarks file and extract metastasis row
 hallmarks = {}
-with open('Data/Menyhart_JPA_CancerHallmarks_core.csv') as f:
+with open('/Users/amelialuongo/Desktop/comp bme/Module-4-Cancer/data/Menyhart_JPA_CancerHallmarks_core.csv') as f:
     for line in f:
         parts = line.strip().strip('"').split('\t')
         hallmarks[parts[0]] = parts[1:]
